@@ -24,6 +24,7 @@
 
 #define MAX_LINE 512
 #define MAX_LENGTH 256
+#define MAX_WATCHERS 100
 static const char *APPNAME = "DetectDebug";
 static const char *PROC_MAPS = "/proc/self/maps";
 static const char *PROC_STATUS = "/proc/self/task/%s/status";
@@ -56,6 +57,7 @@ void detect_memory_dump_loop(void *pargs);
 
 void detect_debugger_loop(void *pargs);
 
+unsigned int gpCrash = 0xfa91b9cd;
 
 //Upon loading the library, this function annotated as constructor starts executing
 __attribute__((constructor))
@@ -138,11 +140,9 @@ checkforTracerPid(int fd) {
 
         if (NULL != my_strstr(map, TRACER_PID)) {
             char *saveptr1;
-            char *str_pid = my_strtok_r(map, ":", &saveptr1);
-            //cprintf("Found:%s:%s",str_pid, saveptr1);
+            my_strtok_r(map, ":", &saveptr1);
             int pid = my_atoi(saveptr1);
             if (pid != 0) {
-                //cprintf("Debugger Attached:[%d]", pid);
                 bRet = true;
             }
             break;
@@ -204,12 +204,11 @@ static inline bool
 detect_fileaccess_for_debugger_memorydump() {
     int length, i = 0;
     int fd;
-    int wd[100] = {0,};
+    int wd[MAX_WATCHERS] = {0,};
     int read_length = 0;
     char buffer[EVENT_BUF_LEN];
     /*creating the INOTIFY instance*/
     fd = my_inotify_init1(0);
-   // fd = inotify_init1(0);
     __android_log_print(ANDROID_LOG_WARN, APPNAME, "Notify Init:%d\n",fd);
 
     if (fd > 0) {
@@ -231,8 +230,6 @@ detect_fileaccess_for_debugger_memorydump() {
                 }
                 snprintf(memPath, sizeof(memPath), PROC_TASK_MEM, entry->d_name);
                 snprintf(pagemapPath, sizeof(pagemapPath), PROC_TASK_PAGEMAP, entry->d_name);
-                __android_log_print(ANDROID_LOG_WARN, APPNAME,
-                                    "Adding Inotify for Path:%s", memPath);
                 wd[i++] = my_inotify_add_watch(fd, memPath, IN_ACCESS | IN_OPEN);
                 wd[i++] = my_inotify_add_watch(fd, pagemapPath, IN_ACCESS | IN_OPEN);
 
@@ -316,7 +313,7 @@ static inline ssize_t read_one_line(int fd, char *buf, unsigned int max_len) {
 __attribute__((always_inline))
 static inline int crash(int randomval){
 
-    int* p = 0xfac1a91d;
+    volatile int *p = gpCrash;
     p += randomval;
     p += *p + randomval;
     /* If it still doesnt crash..crash using null pointer */
