@@ -19,5 +19,7 @@ inotify watch of the following files
  4. /proc/self/task/<taskid>/mem
  5. /proc/self/task/<taskid>/pagemap
  
-Any attempts to access or open these files is an indication of access to the memory. If you use the techniques in [DetectFrida](https://github.com/darvincisec/DetectFrida), inotify will be triggered. There is no way to filter if the access is by the same process or a different process. fanotify addresses the problem wherein it provides the pid of the process accessing the file. But it is not a valid syscall that can be used by apps
+Any attempts to access or open these files is an indication of access to the memory. If you use the techniques in [DetectFrida](https://github.com/darvincisec/DetectFrida), inotify will be triggered. There is no way to filter if the access is by the same process or a different process. fanotify addresses the problem wherein it provides the pid of the process accessing the file. But [seccomp](https://android-developers.googleblog.com/2017/07/seccomp-filter-in-android-o.html) filter in Android O filters restricts the usage by normal apps.
 
+## Bonus
+Just listening on file opening of /proc/self/maps makes it a candidate for Anti-Frida. Just that it is mutually exclusive with other anti-frida techniques relying on the /proc/self/maps.
